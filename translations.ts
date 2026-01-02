@@ -112,7 +112,12 @@ export const translations = {
       },
       message: 'Message / Requirements',
       messagePlaceholder: 'Please describe your power requirements or issue...',
-      sendRequest: 'Send Request'
+      sendRequest: 'Send Request',
+      sending: 'Sending...',
+      errors: {
+        required: 'This field is required',
+        email: 'Please enter a valid email address'
+      }
     },
     about: {
       title: 'About Powersil',
@@ -247,7 +252,12 @@ export const translations = {
       },
       message: 'Mensagem / Requisitos',
       messagePlaceholder: 'Descreva os seus requisitos de energia ou problema...',
-      sendRequest: 'Enviar Pedido'
+      sendRequest: 'Enviar Pedido',
+      sending: 'A enviar...',
+      errors: {
+        required: 'Campo obrigatório',
+        email: 'Por favor insira um email válido'
+      }
     },
     about: {
       title: 'Sobre a Powersil',

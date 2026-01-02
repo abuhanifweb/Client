@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, Loader2, AlertCircle } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const Contact: React.FC = () => {
@@ -13,19 +13,63 @@ const Contact: React.FC = () => {
     message: ''
   });
   
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validate = () => {
+    const newErrors: Record<string, string> = {};
+    if (!formData.name.trim()) newErrors.name = t('contact.errors.required');
+    if (!formData.email.trim()) {
+      newErrors.email = t('contact.errors.required');
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = t('contact.errors.email');
+    }
+    if (!formData.phone.trim()) newErrors.phone = t('contact.errors.required');
+    if (!formData.message.trim()) newErrors.message = t('contact.errors.required');
+    return newErrors;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const validationErrors = validate();
+    
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+
     // Simulate API submission
     setTimeout(() => {
       setSubmitted(true);
-    }, 1000);
+      setIsSubmitting(false);
+      setFormData({
+        name: '',
+        company: '',
+        email: '',
+        phone: '',
+        type: 'Quote',
+        message: ''
+      });
+    }, 1500);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Clear error for this field when user types
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: '' });
+    }
   };
+
+  const inputClass = (fieldName: string) => `
+    w-full px-4 py-3 rounded-md border text-slate-900 bg-white shadow-sm placeholder-slate-400
+    focus:ring-2 focus:ring-powersil-accent focus:border-transparent focus:outline-none transition-all duration-200
+    ${errors[fieldName] ? 'border-red-500 bg-red-50 focus:ring-red-500' : 'border-slate-300'}
+  `;
 
   return (
     <div className="bg-slate-50 min-h-screen">
@@ -61,111 +105,134 @@ const Contact: React.FC = () => {
 
         <div className="my-16 flex flex-col lg:flex-row gap-12">
           {/* Map Placeholder */}
-          <div className="flex-1 bg-slate-200 rounded-lg min-h-[400px] flex items-center justify-center">
-             <span className="text-slate-500 font-bold text-xl">Interactive Map Placeholder</span>
-             {/* In a real app, embed Google Maps iframe here */}
+          <div className="flex-1 bg-slate-200 rounded-lg min-h-[400px] flex items-center justify-center overflow-hidden shadow-inner">
+             <div className="text-center p-6">
+               <MapPin className="h-12 w-12 text-slate-400 mx-auto mb-2" />
+               <span className="text-slate-500 font-bold text-xl block">Interactive Map</span>
+               <span className="text-slate-400 text-sm">Google Maps Integration Area</span>
+             </div>
           </div>
 
           {/* Form */}
-          <div className="flex-1 bg-white p-8 rounded-lg shadow-lg border border-slate-100">
-            <h2 className="text-2xl font-bold font-display text-powersil-dark mb-6">{t('contact.requestTitle')}</h2>
+          <div className="flex-1 bg-white p-8 lg:p-10 rounded-xl shadow-xl border border-slate-100 relative">
+            <h2 className="text-2xl font-bold font-display text-powersil-dark mb-6 pb-4 border-b border-slate-100">
+              {t('contact.requestTitle')}
+            </h2>
             
             {submitted ? (
-              <div className="bg-green-50 border border-green-200 text-green-800 p-6 rounded-lg text-center">
-                <h3 className="text-xl font-bold mb-2">{t('contact.successTitle')}</h3>
-                <p>{t('contact.successDesc')}</p>
+              <div className="bg-green-50 border border-green-200 text-green-800 p-8 rounded-lg text-center animate-fade-in">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Send className="h-8 w-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold mb-2">{t('contact.successTitle')}</h3>
+                <p className="text-green-700 mb-6">{t('contact.successDesc')}</p>
                 <button 
                   onClick={() => setSubmitted(false)}
-                  className="mt-6 text-sm font-bold underline"
+                  className="text-sm font-bold text-powersil-primary underline hover:text-powersil-accent transition-colors"
                 >
                   {t('contact.sendAnother')}
                 </button>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.fullName')}</label>
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-semibold text-slate-700">{t('contact.fullName')} <span className="text-red-500">*</span></label>
                     <input
                       type="text"
                       name="name"
-                      required
                       value={formData.name}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none"
+                      className={inputClass('name')}
                     />
+                    {errors.name && <p className="text-red-500 text-xs flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.name}</p>}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.company')}</label>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-semibold text-slate-700">{t('contact.company')}</label>
                     <input
                       type="text"
                       name="company"
                       value={formData.company}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none"
+                      className={inputClass('company')}
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.email')}</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-semibold text-slate-700">{t('contact.email')} <span className="text-red-500">*</span></label>
                     <input
                       type="email"
                       name="email"
-                      required
                       value={formData.email}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none"
+                      className={inputClass('email')}
                     />
+                    {errors.email && <p className="text-red-500 text-xs flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.email}</p>}
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.phone')}</label>
+                  <div className="space-y-1">
+                    <label className="block text-sm font-semibold text-slate-700">{t('contact.phone')} <span className="text-red-500">*</span></label>
                     <input
                       type="tel"
                       name="phone"
-                      required
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none"
+                      className={inputClass('phone')}
                     />
+                     {errors.phone && <p className="text-red-500 text-xs flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.phone}</p>}
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.inquiryType')}</label>
-                  <select
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none bg-white"
-                  >
-                    <option value="Quote">{t('contact.types.quote')}</option>
-                    <option value="Service">{t('contact.types.service')}</option>
-                    <option value="Fuel">{t('contact.types.fuel')}</option>
-                    <option value="Other">{t('contact.types.other')}</option>
-                  </select>
+                <div className="space-y-1">
+                  <label className="block text-sm font-semibold text-slate-700">{t('contact.inquiryType')}</label>
+                  <div className="relative">
+                    <select
+                      name="type"
+                      value={formData.type}
+                      onChange={handleChange}
+                      className={`${inputClass('type')} appearance-none`}
+                    >
+                      <option value="Quote">{t('contact.types.quote')}</option>
+                      <option value="Service">{t('contact.types.service')}</option>
+                      <option value="Fuel">{t('contact.types.fuel')}</option>
+                      <option value="Other">{t('contact.types.other')}</option>
+                    </select>
+                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                        <svg className="h-4 w-4 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                      </div>
+                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">{t('contact.message')}</label>
+                <div className="space-y-1">
+                  <label className="block text-sm font-semibold text-slate-700">{t('contact.message')} <span className="text-red-500">*</span></label>
                   <textarea
                     name="message"
-                    required
                     rows={4}
                     value={formData.message}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-powersil-accent focus:outline-none"
+                    className={inputClass('message')}
                     placeholder={t('contact.messagePlaceholder')}
                   ></textarea>
+                   {errors.message && <p className="text-red-500 text-xs flex items-center gap-1 mt-1"><AlertCircle className="h-3 w-3" /> {errors.message}</p>}
                 </div>
 
                 <button
                   type="submit"
-                  className="w-full bg-powersil-accent text-powersil-dark font-bold py-3 rounded-md hover:bg-amber-400 transition-colors flex items-center justify-center gap-2"
+                  disabled={isSubmitting}
+                  className="w-full bg-powersil-accent text-powersil-dark font-bold py-4 rounded-md hover:bg-amber-400 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-4"
                 >
-                  <Send className="h-5 w-5" />
-                  {t('contact.sendRequest')}
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {t('contact.sending')}
+                    </>
+                  ) : (
+                    <>
+                      <Send className="h-5 w-5" />
+                      {t('contact.sendRequest')}
+                    </>
+                  )}
                 </button>
               </form>
             )}
